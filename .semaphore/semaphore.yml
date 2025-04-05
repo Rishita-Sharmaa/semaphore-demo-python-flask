@@ -7,10 +7,6 @@ agent:
 blocks:
   - name: Build
     task:
-      # Mount a secret which defines DOCKER_USERNAME and DOCKER_PASSWORD
-      # environment variables.
-      # For info on creating secrets, see:
-      # https://docs.semaphoreci.com/article/66-environment-variables-and-secrets
       secrets:
         - name: pyflask-semaphore
       jobs:
@@ -28,10 +24,6 @@ blocks:
 
   - name: Run & Test Docker image
     task:
-      # Mount a secret which defines DOCKER_USERNAME and DOCKER_PASSWORD
-      # environment variables.
-      # For info on creating secrets, see:
-      # https://docs.semaphoreci.com/article/66-environment-variables-and-secrets
       secrets:
         - name: pyflask-semaphore
       prologue:
@@ -41,17 +33,21 @@ blocks:
           - checkout
           - docker pull "$DOCKER_USERNAME"/pyflasksemaphore
           - docker-compose up -d
+          # Wait for container to initialize
+          - sleep 15
       jobs:
       - name: Check Running Images
         commands:
           - docker ps
+          # Additional container health check
+          - docker inspect semaphore-pyflask-docker_flasksemaphore_1 | grep Status
       - name: Run Unit test
         commands:
-          - docker exec -it semaphore-pyflask-docker_flasksemaphore_1 python -m unittest
+          # Verify test files exist
+          - docker exec semaphore-pyflask-docker_flasksemaphore_1 ls -la /app/tests
+          # Run tests with proper discovery
+          - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /app -p "test_*.py" -v
 
-# Manual deployment to Heroku on successful builds on master branch:
-# For info on promotions, see:
-# https://docs.semaphoreci.com/article/50-pipeline-yaml#promotions
 promotions:
   - name: Deploy to Heroku
     pipeline_file: deploy-heroku.yml
