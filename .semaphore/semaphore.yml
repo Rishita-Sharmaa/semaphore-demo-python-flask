@@ -32,7 +32,7 @@ blocks:
           - checkout
           - docker pull "$DOCKER_USERNAME"/pyflasksemaphore
           - docker-compose up -d
-          - "timeout 60 bash -c 'until [ \"$(docker inspect -f {{{{.State.Health.Status}}}} semaphore-pyflask-docker_flasksemaphore_1)\" = \"healthy\" ]; do sleep 2; done'"
+          - timeout 60 bash -c 'until [ "$(docker inspect --format '\''{{.State.Health.Status}}'\'' semaphore-pyflask-docker_flasksemaphore_1)" = "healthy" ]; do sleep 2; done'
       jobs:
         - name: Check Container Status
           commands:
@@ -45,7 +45,7 @@ blocks:
           commands:
             - docker exec semaphore-pyflask-docker_flasksemaphore_1 ls -la /opt/tests
             - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /opt -p "test_*.py" -v
-            - 'echo "Unit tests exited with status: $?"'
+            - echo "Unit tests exited with status: $?"
 
 promotions:
   - name: Deploy to Heroku
