@@ -1,9 +1,10 @@
 version: v1.0
 name: Semaphore Python / Flask / Docker Example Pipeline
 agent:
-  machine:    
+  machine:
     type: e1-standard-2
     os_image: ubuntu2004
+
 blocks:
   - name: Build
     task:
@@ -12,7 +13,6 @@ blocks:
       jobs:
       - name: Docker build
         commands:
-          # Authenticate with Docker Hub
           - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
           - checkout
           - docker-compose build
@@ -28,25 +28,28 @@ blocks:
         - name: pyflask-semaphore
       prologue:
         commands:
-          # Authenticate with Docker Hub
           - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
           - checkout
           - docker pull "$DOCKER_USERNAME"/pyflasksemaphore
           - docker-compose up -d
-          # Wait for container to initialize
-          - sleep 15
+          # Wait for health checks to pass
+          - timeout 60 bash -c 'until [ "$(docker inspect -f {{.State.Health.Status}} semaphore-pyflask-docker_flasksemaphore_1)" = "healthy" ]; do sleep 2; done'
       jobs:
-      - name: Check Running Images
+      - name: Check Container Status
         commands:
-          - docker ps
-          # Additional container health check
-          - docker inspect semaphore-pyflask-docker_flasksemaphore_1 | grep Status
+          - docker ps -a
+          - docker inspect semaphore-pyflask-docker_flasksemaphore_1 | grep -A 5 Health
+          - docker-compose logs --tail=20 mongodb
+          - docker-compose logs --tail=20 flasksemaphore
+
       - name: Run Unit test
         commands:
-          # Verify test files exist
-          - docker exec semaphore-pyflask-docker_flasksemaphore_1 ls -la /app/tests
-          # Run tests with proper discovery
-          - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /app -p "test_*.py" -v
+          # Verify test files exist in /opt (matching your volume mount)
+          - docker exec semaphore-pyflask-docker_flasksemaphore_1 ls -la /opt/tests
+          # Run tests with explicit discovery
+          - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /opt -p "test_*.py" -v
+          # Capture exit code explicitly
+          - echo "Unit tests exited with status: $?"
 
 promotions:
   - name: Deploy to Heroku

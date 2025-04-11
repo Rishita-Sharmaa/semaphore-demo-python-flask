@@ -1,23 +1,32 @@
 version: '3.8'
 services:
   mongodb:
-    image: registry.semaphoreci.com/mongo:4.4
+    image: registry.semaphoreci.com/mongo:4.4  # Or use mongo:4.4
     container_name: "mongodb"
     ports:
       - 27017:27017
-    command: mongod --logpath=/dev/null # --quiet
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   flasksemaphore:
     image: pyflasksemaphore
-    container_name: semaphore-pyflask-docker_flasksemaphore_1
     build:
       context: .
       dockerfile: ./flask.Dockerfile
     ports:
       - "5000:5000"
-    volumes:
-      - .:/opt/
     environment:
       - DB=mongodb://mongodb:27017/tasks
       - PORT=5000
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
