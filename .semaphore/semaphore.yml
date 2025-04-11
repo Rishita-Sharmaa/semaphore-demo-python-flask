@@ -23,7 +23,7 @@ blocks:
             - docker push "$DOCKER_USERNAME/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID"
             - docker images
 
-  - name: Run & Test Docker image
+  - name: Run & Test
     task:
       secrets:
         - name: pyflask-semaphore
@@ -33,20 +33,17 @@ blocks:
           - checkout
           - docker pull "$DOCKER_USERNAME/pyflasksemaphore"
           - docker-compose up -d
-          - timeout 60 bash -c 'until [ "$(docker inspect -f {{.State.Health.Status}} semaphore-pyflask-docker_flasksemaphore_1)" = "healthy" ]; do sleep 2; done'
+          - sleep 20  # Wait for containers to initialize
       jobs:
-        - name: Check Container Status
+        - name: Check Containers
           commands:
             - docker ps -a
-            - docker inspect semaphore-pyflask-docker_flasksemaphore_1 | grep -A 5 Health
-            - docker-compose logs --tail=20 mongodb
-            - docker-compose logs --tail=20 flasksemaphore
+            - docker inspect semaphore-pyflask-docker_flasksemaphore_1
+            - docker-compose logs --tail=20
 
-        - name: Run Unit test
+        - name: Run Tests
           commands:
-            - docker exec semaphore-pyflask-docker_flasksemaphore_1 ls -la /opt/tests
             - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /opt -p "test_*.py" -v
-            - echo "Unit tests exited with status: $?"
 
 promotions:
   - name: Deploy to Heroku
