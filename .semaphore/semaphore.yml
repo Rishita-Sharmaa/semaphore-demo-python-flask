@@ -11,16 +11,16 @@ blocks:
       secrets:
         - name: pyflask-semaphore
       jobs:
-      - name: Docker build
-        commands:
-          - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
-          - checkout
-          - docker-compose build
-          - docker tag pyflasksemaphore:latest "$DOCKER_USERNAME"/pyflasksemaphore:latest
-          - docker tag pyflasksemaphore:latest "$DOCKER_USERNAME"/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID
-          - docker push "$DOCKER_USERNAME"/pyflasksemaphore:latest
-          - docker push "$DOCKER_USERNAME"/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID
-          - docker images
+        - name: Docker build
+          commands:
+            - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+            - checkout
+            - docker-compose build
+            - docker tag pyflasksemaphore:latest "$DOCKER_USERNAME"/pyflasksemaphore:latest
+            - docker tag pyflasksemaphore:latest "$DOCKER_USERNAME"/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID
+            - docker push "$DOCKER_USERNAME"/pyflasksemaphore:latest
+            - docker push "$DOCKER_USERNAME"/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID
+            - docker images
 
   - name: Run & Test Docker image
     task:
@@ -32,25 +32,20 @@ blocks:
           - checkout
           - docker pull "$DOCKER_USERNAME"/pyflasksemaphore
           - docker-compose up -d
-          # Wait for health checks to pass
-          - "timeout 60 bash -c 'until [ \"$(docker inspect -f {{.State.Health.Status}} semaphore-pyflask-docker_flasksemaphore_1)\" = \"healthy\" ]; do sleep 2; done'"
-
+          - "timeout 60 bash -c 'until [ \"$(docker inspect -f {{{{.State.Health.Status}}}} semaphore-pyflask-docker_flasksemaphore_1)\" = \"healthy\" ]; do sleep 2; done'"
       jobs:
-      - name: Check Container Status
-        commands:
-          - docker ps -a
-          - docker inspect semaphore-pyflask-docker_flasksemaphore_1 | grep -A 5 Health
-          - docker-compose logs --tail=20 mongodb
-          - docker-compose logs --tail=20 flasksemaphore
+        - name: Check Container Status
+          commands:
+            - docker ps -a
+            - docker inspect semaphore-pyflask-docker_flasksemaphore_1 | grep -A 5 Health
+            - docker-compose logs --tail=20 mongodb
+            - docker-compose logs --tail=20 flasksemaphore
 
-      - name: Run Unit test
-        commands:
-          # Verify test files exist in /opt (matching your volume mount)
-          - docker exec semaphore-pyflask-docker_flasksemaphore_1 ls -la /opt/tests
-          # Run tests with explicit discovery
-          - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /opt -p "test_*.py" -v
-          # Capture exit code explicitly
-          - echo "Unit tests exited with status: $?"
+        - name: Run Unit test
+          commands:
+            - docker exec semaphore-pyflask-docker_flasksemaphore_1 ls -la /opt/tests
+            - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /opt -p "test_*.py" -v
+            - 'echo "Unit tests exited with status: $?"'
 
 promotions:
   - name: Deploy to Heroku
