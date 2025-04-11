@@ -6,6 +6,9 @@ agent:
     type: e1-standard-2
     os_image: ubuntu2004
 
+branches:
+  - main  # or master
+
 blocks:
   - name: Build
     task:
@@ -33,7 +36,7 @@ blocks:
           - checkout
           - docker pull "$DOCKER_USERNAME/pyflasksemaphore"
           - docker-compose up -d
-          - sleep 20  # Wait for containers to initialize
+          - timeout 120 bash -c 'while [[ "$(docker inspect -f "{{.State.Health.Status}}" semaphore-pyflask-docker_flasksemaphore_1)" != "healthy" ]]; do sleep 5; echo "Waiting..."; done'
       jobs:
         - name: Check Containers
           commands:
@@ -43,7 +46,10 @@ blocks:
 
         - name: Run Tests
           commands:
-            - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /opt -p "test_*.py" -v
+            - docker exec semaphore-pyflask-docker_flasksemaphore_1 python -m unittest discover -s /opt -p "test_*.py" -v || exit 1
+      epilogue:
+        commands:
+          - docker-compose down -v
 
 promotions:
   - name: Deploy to Heroku
