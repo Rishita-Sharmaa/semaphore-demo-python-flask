@@ -33,7 +33,8 @@ blocks:
           - docker pull "$DOCKER_USERNAME"/pyflasksemaphore
           - docker-compose up -d
           # Wait for health checks to pass
-          - timeout 60 bash -c 'until [ "$(docker inspect -f {{.State.Health.Status}} semaphore-pyflask-docker_flasksemaphore_1)" = "healthy" ]; do sleep 2; done'
+          - "timeout 60 bash -c 'until [ \"$(docker inspect -f {{.State.Health.Status}} semaphore-pyflask-docker_flasksemaphore_1)\" = \"healthy\" ]; do sleep 2; done'"
+
       jobs:
       - name: Check Container Status
         commands:
