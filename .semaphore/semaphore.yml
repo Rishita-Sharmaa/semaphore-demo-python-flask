@@ -1,5 +1,6 @@
 version: v1.0
 name: Semaphore Python / Flask / Docker Example Pipeline
+
 agent:
   machine:
     type: e1-standard-2
@@ -16,10 +17,10 @@ blocks:
             - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
             - checkout
             - docker-compose build
-            - docker tag pyflasksemaphore:latest "$DOCKER_USERNAME"/pyflasksemaphore:latest
-            - docker tag pyflasksemaphore:latest "$DOCKER_USERNAME"/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID
-            - docker push "$DOCKER_USERNAME"/pyflasksemaphore:latest
-            - docker push "$DOCKER_USERNAME"/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID
+            - docker tag pyflasksemaphore:latest "$DOCKER_USERNAME/pyflasksemaphore:latest"
+            - docker tag pyflasksemaphore:latest "$DOCKER_USERNAME/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID"
+            - docker push "$DOCKER_USERNAME/pyflasksemaphore:latest"
+            - docker push "$DOCKER_USERNAME/pyflasksemaphore:$SEMAPHORE_WORKFLOW_ID"
             - docker images
 
   - name: Run & Test Docker image
@@ -30,9 +31,9 @@ blocks:
         commands:
           - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
           - checkout
-          - docker pull "$DOCKER_USERNAME"/pyflasksemaphore
+          - docker pull "$DOCKER_USERNAME/pyflasksemaphore"
           - docker-compose up -d
-          - "timeout 60 bash -c 'until [ \"$(docker inspect --format \"{{.State.Health.Status}}\" semaphore-pyflask-docker_flasksemaphore_1)\" = \"healthy\" ]; do sleep 2; done'"
+          - timeout 60 bash -c 'until [ "$(docker inspect -f "{{.State.Health.Status}}" semaphore-pyflask-docker_flasksemaphore_1)" = "healthy" ]; do sleep 2; done'
       jobs:
         - name: Check Container Status
           commands:
